@@ -32,6 +32,8 @@ socket.on('clientID', (clientID) => {
 
 // go to 'play' screen when received start msg
 socket.on('start', (gameId) => {
+    // manually disconnect to indicate it connection wasn't unintentionally closed
+    socket.disconnect();
     setTimeout(() => {
         window.location.href = `/play/${gameId}`
     }, 2000);

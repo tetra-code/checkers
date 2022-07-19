@@ -8,6 +8,7 @@ const port = process.env.PORT || 3000;
 const socketio = require('socket.io');
 const pairing = require('./pairing');
 const games = [];
+const users = {};
 let alreadyCreatedMultiGame = false;
 
 /**
@@ -37,7 +38,7 @@ app.get('/*', (req, res) => {
 const cleanUp = () => {
     setInterval(() => {
         games.filter(g => g.state !== 0);
-    }, 10000);
+    }, 3000);
 };
 
 // generates unique game ID for url and socket rooms for multiplayer and client id
@@ -71,6 +72,18 @@ const createMultiGame = (socket, clientID) => {
     return game;
 };
 
+// utility to check game the given gameID
+const checkGame = (clientID) => {
+    let game;
+    for (let i = 0; i < games.length; i++) {
+        game = games[i];
+        if (game.player1 === clientID || game.player2 === clientID) {
+            game.state = 0;
+            console.log("removed game object");
+        }
+    }
+};
+
 // utility to check or generate empty game objects for multiplayer
 const checkForMultiGame = (socket, clientID) => {
     // looks for already created multiplayer game needing a second player
@@ -101,16 +114,19 @@ const io = socketio(server);
 // at every WS connection, check if local session already has a client id.
 io.on("connection", (socket) => {
     let clientID = guid();
-    console.log("established connection")
+    // by default send clientID to all new connections
     socket.emit('clientID', clientID);
+    console.log("Sent ID to " + socket.id)
 
     socket.on('setID', () => {
         console.log("Client has set the Id")
+        users[socket.id] = clientID;
     });
 
     socket.on('existsID', (id) => {
         clientID = id;
         console.log("Client already has ID");
+        users[socket.id] = clientID;
     });
 
     socket.on("singleplayer", () => {
@@ -135,11 +151,23 @@ io.on("connection", (socket) => {
             io.to(game.gameId).emit("start", game.gameId);
         }
     });
+
+    socket.on("disconnect", (reason) => {
+        // when moving to /play, all clients are programmed to disconnect manually.
+        // this returns the reason as 'client namespace disconnect' which
+        // distinguishes from 'transport close'
+        console.log(`Disconnected due to ${reason}`);
+        if (reason === "transport close") {
+            // player left mid game or connection lost
+            // if it created a game, set it to 0
+            const clientID = users[socket.id];
+            checkGame(clientID);
+            delete users[socket.id];
+            console.log("removed from users object");
+        }
+    });
     //below broadcasts to all connected sockets
     // io.emit("new user just connected");
-    socket.on("disconnect", () => {
-        console.log("client disconnected")
-    });
 });
 
 server.on("error", (err) => {
