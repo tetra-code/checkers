@@ -1,10 +1,17 @@
+/**
+ * Setup for http and WS connection.
+ */
 const express = require('express');
 const app = express();
 const http = require('http');
 const port = process.env.PORT || 3000;
 const socketio = require('socket.io');
 const pairing = require('./pairing');
+const games = [];
 
+/**
+ * Endpoints
+ */
 app.use(express.static(`${__dirname}/public`, {
     extensions:['html']
 }));
@@ -22,10 +29,17 @@ app.get('*', (req, res) => {
     res.status(404).send("Not found");
 });
 
-// array of games to keep track of game objects
-const games = [];
+/**
+ * Utilities
+ */
+// every 10 seconds remove finished games in array
+const cleanUp = () => {
+    setInterval(() => {
+        games.filter(g => g.state !== 0);
+    }, 10000);
+};
 
-// utility to generate unique game ID for url and socket rooms for multiplayer
+// generates unique game ID for url and socket rooms for multiplayer
 const guid = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
@@ -84,6 +98,9 @@ const checkIfAlreadyCreatedMultiGame = (socket) => {
     };
 }
 
+/**
+ * Creating server and establishing ws connection
+ */
 const server = http.createServer(app);
 const io = socketio(server);
 
@@ -105,7 +122,6 @@ io.on("connection", (socket) => {
             io.to(game.gameId).emit("start", game.gameId);
         }
     });
-
     //below broadcasts to all connected sockets
     // io.emit("new user just connected");
 });
@@ -118,16 +134,4 @@ server.listen(port, () => {
     console.log(`Server connected to port ${port}`);
 })
 
-// every 10 seconds remove finished games in array
-
-// setInterval(() => {
-//     games.forEach((game) => {
-//         cleanUp(game)
-//     });
-// }, 10000);
-
-// const cleanUp = (game) => {
-//     if (game.state === 0) {
-//         games.remove(game);
-//     }
-// };
+cleanUp();
