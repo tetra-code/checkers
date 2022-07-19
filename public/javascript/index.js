@@ -4,6 +4,7 @@ let gameId;
 
 const singleplayerBtn = document.getElementById('singleplayer');
 const multiplayerBtn = document.getElementById('multiplayer');
+const howToPlayBtn = document.getElementById('howToPlayBtn');
 
 // default msg type 'connect'
 socket.on('connect', () => {
