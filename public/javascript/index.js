@@ -1,6 +1,7 @@
 const wsProtocol = location.protocol.includes('https') ? 'wss:' : 'ws:';
 const socket = io(`${wsProtocol}//${location.host}`);
 let gameId;
+let userId = sessionStorage.getItem('id');
 
 const singleplayerBtn = document.getElementById('singleplayer');
 const multiplayerBtn = document.getElementById('multiplayer');
@@ -8,12 +9,25 @@ const howToPlayBtn = document.getElementById('howToPlayBtn');
 
 // default msg type 'connect'
 socket.on('connect', () => {
-    console.log(socket.id);
+    console.log("connected to server");
 });
 
 // default msg type 'disconnect'
 socket.on('disconnect', () => {
     console.log("disconnected from server");
+});
+
+// checks for client ID in sesion storage
+socket.on('clientID', (clientID) => { 
+    console.log(userId);
+    if (userId === null) {
+        sessionStorage.setItem('id', clientID);
+        console.log("Set client ID");
+        socket.emit("setID")
+    } else {
+        console.log("Client ID already exists");
+        socket.emit("existsID", userId);
+    }
 });
 
 // go to 'play' screen when received start msg
@@ -23,8 +37,6 @@ socket.on('start', (gameId) => {
     }, 2000);
 });
 
-// custom msg type
-socket.emit("Hello from client");
 
 //add event listeners
 singleplayerBtn.addEventListener("click", () => {
