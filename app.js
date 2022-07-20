@@ -31,17 +31,16 @@ app.get('/*', (req, res) => {
     res.status(404).send("Not found");
 });
 
-/**
- * Utilities
- */
-// every 10 seconds remove finished games in array
+//=================Utilities=====================//
+
+// every 3 seconds remove finished games in array
 const cleanUp = () => {
     setInterval(() => {
         games.filter(g => g.state !== 0);
     }, 3000);
 };
 
-// generates unique game ID for url and socket rooms for multiplayer and client id
+// generates unique game ID for url, socket rooms for multiplayer and client ID
 const guid = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
@@ -49,7 +48,7 @@ const guid = () => {
     });
 };
 
-// utility to generate empty game objects for singleplayer
+// generates empty game objects for singleplayer
 const createSingleGame = (clientID) => {
     const game = new pairing();
     game.gameId = guid();
@@ -60,7 +59,7 @@ const createSingleGame = (clientID) => {
     return game.gameId;
 };
 
-// utility to generate empty game objects for singleplayer
+// generates empty game objects for multiplayer
 const createMultiGame = (socket, clientID) => {
     const game = new pairing();
     game.gameId = guid();
@@ -68,12 +67,13 @@ const createMultiGame = (socket, clientID) => {
     game.player1 = clientID;
     games.push(game);
     socket.join(game.gameId);
+    // socket.leave(socket.id);
     socket.emit('color', 'white');
     console.log("generated new multiplayer game");
     return game;
 };
 
-// utility to check and remove game given clientID or gameID
+// check and remove game using the clientID or gameID
 const removeGame = (id) => {
     let game;
     for (let i = 0; i < games.length; i++) {
@@ -85,7 +85,7 @@ const removeGame = (id) => {
     }
 };
 
-// utility to check or generate empty game objects for multiplayer
+// check or generate empty game objects for multiplayer
 const checkForMultiGame = (socket, clientID) => {
     // looks for already created multiplayer game needing a second player
     let game;
@@ -107,9 +107,7 @@ const checkForMultiGame = (socket, clientID) => {
     return;
 };
 
-/**
- * Creating server and establishing ws connection
- */
+//===================Creating servers and requests handling==================//
 const server = http.createServer(app);
 const io = socketio(server);
 
@@ -137,13 +135,13 @@ io.on("connection", (socket) => {
         if (game !== undefined && alreadyCreatedMultiGame) {
             game.state === 0;
             console.log("deleting game")
+            // removeGame(game.gameId)
         }
         const gameId = createSingleGame(clientID);
         socket.emit("start", gameId);
     });
 
     socket.on("multiplayer", () => {
-        //once you generate multiplayer game, make the multiplayer game button unclickable
         let game = checkForMultiGame(socket, clientID);
         if (game === undefined) {
             game = createMultiGame(socket, clientID);

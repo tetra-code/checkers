@@ -19,15 +19,22 @@ let moveDeviation = 10;
 let contor = 0;
 let bigScreen = 1;
 
+let updatingBoard = false;
+
 let selectedPiece, selectedPieceindex;
 let upRight, upLeft, downLeft, downRight; 
 
 const box = [];
 const whitecheckers = [];
 const blackcheckers = [];
-
 let previousSquare;
 let currentSquare;
+let currentSquareIndex;
+
+let toUpdateSqaureIndex;
+
+let movedSquares;
+let selectedChecker;
 let selectedCheckerType;
 let mustAttack = false;
 let gameOver = false;
@@ -156,10 +163,24 @@ for (var i = 9; i <= 12; i++){
 }
 
 /*=====================Selected checker=====================*/
-selectedCheckerType = whitecheckers;
-// selectedCheckerType = blackcheckers;
+if (color === 'white') {
+	selectedCheckerType = whitecheckers;
+} else {
+	selectedCheckerType = blackcheckers;
+}
+
+function isTurn() {
+	if (whiteIsNext && color === 'white') {
+		return true;
+	}
+	if (!whiteIsNext && color === 'black') {
+		return true;
+	}
+	return false;
+}
 
 function showMoves(piece) {
+	if (!isTurn() && !updatingBoard) return false;
 	let match = false;
 	mustAttack = false;
 	if (selectedPiece) {
@@ -168,12 +189,13 @@ function showMoves(piece) {
         highLightMove();
     }
 	selectedPiece = piece;
-	let i; // retine indicele damei
+	let i;
 	for (let j = 1; j <= 12; j++) {
 		if(selectedCheckerType[j].id == piece) {
 			i = j;
 			selectedPieceindex = j;
 			match = true;
+			break;
 		}
 	}
     const selectedCheckerPiece = selectedCheckerType[i];
@@ -208,7 +230,6 @@ function showMoves(piece) {
 		moveDownRight = 9;
 		moveDownLeft = 7;
 	}
-
  	// check if you can attack
 	hasAttackMoves(selectedCheckerPiece)
 	
@@ -224,6 +245,7 @@ function showMoves(piece) {
 	if (downLeft || downRight || upLeft || upRight) return true;
 	return false;
 }
+
 
 /**
  * Removes the highlighted moveable places of selected checker piece
@@ -247,14 +269,13 @@ function makeMove(index) {
 		selectedPiece = undefined;
 		return false;
 	}
-    
     // perspective is of the moving player
 	if (selectedCheckerPiece.color=="white") {
 		cpy_downRight = upRight;
 		cpy_downLeft = upLeft;
 		cpy_upLeft = downLeft;
 		cpy_upRight = downRight;
-	} else{
+	} else {
 		cpy_downRight = upLeft;
 		cpy_downLeft = upRight;
 		cpy_upLeft = downRight;
@@ -267,9 +288,8 @@ function makeMove(index) {
     if (index == cpy_upRight) {
         isMove = true;		
         if(selectedCheckerPiece.color=="white"){
-            // muta piesa
             executeMove( multiplier * 1, multiplier * 1, multiplier * 9 );
-            //elimina piesa daca a fost executata o saritura
+            // remove track if jump performed
             if(mustAttack) eliminateCheck(index - 9);
         }
         else{
@@ -311,12 +331,13 @@ function makeMove(index) {
             if (mustAttack) eliminateCheck ( index  - 7);
         }
     }
-    
+
     // for when hit is made, need to erase roads
 	eraseRoads();
 	selectedCheckerType[selectedPieceindex].checkIfKing();
 
-	// change the turn
+	// change the turn 
+	// may not be necessary
 	if (isMove) {
 		anotherMove = undefined;
 		if (mustAttack) {
@@ -334,7 +355,12 @@ function makeMove(index) {
 		 	if(gameOver) { setTimeout( declareWinner() ,3000) ; return false};
 		}
 	}
-    broadcastMove();
+	whiteIsNext = !whiteIsNext;
+	console.log("made move")
+	// don't braodcast if you're updating
+	if (!updatingBoard) {
+		broadcastMove();
+	}
 }
 
 /*===========Utility methods to check and moving pieces=========*/
@@ -343,14 +369,17 @@ function executeMove(X,Y,nSquare) {
     eraseHighlights()
 
 	// exchange coordinates of moved parts
-    let selectedChecker = selectedCheckerType[selectedPieceindex];
+    selectedChecker = selectedCheckerType[selectedPieceindex];
 	selectedChecker.changeCoord(X,Y); 
 	selectedChecker.setCoord(0,0);
 
 	// release the field that the piece occupies and occupy the one that it selected
+	selectedCheckerType[selectedPieceindex].occupied_square + nSquare
 	previousSquare = box[selectedChecker.occupied_square];
-    currentSquare = box[selectedChecker.occupied_square + nSquare];
 
+	toUpdateSqaureIndex = selectedPieceindex;
+	currentSquareIndex = selectedChecker.occupied_square + nSquare;
+	currentSquare = box[currentSquareIndex];
     // highlight previous and new squares
     highLightMove()
 
@@ -502,10 +531,12 @@ document.getElementsByTagName("BODY")[0].onresize = function() {
 	}
 }
 
-function broadcastMove(previousSquare, currentSquare) {
+function broadcastMove() {
+	console.log(toUpdateSqaureIndex)
+	console.log(selectedCheckerType[selectedPieceindex])
 	const payload = {
-		'previous_square': previousSquare,
-		'current_square': currentSquare,
+		'piece_index': toUpdateSqaureIndex,
+		'dest_square_index': currentSquareIndex,
 		'color': color,
 		'white_is_next': whiteIsNext,
 		'game_is_live': gameIsLive
@@ -528,11 +559,25 @@ socket.on('game_move', (payload) => {
 	console.log('received game move')
 	const response = JSON.parse(payload);
 	//only accept if its from opponent
-	console.log(response);
 	if (color !== response.color) {
-		previousSquare = response.previous_square;
-		currentSquare = response.current_square;
-		whiteIsNext = response.white_is_next;
-		game_is_live = response.game_is_live;
+		updateBoard(response);
 	}
 });
+
+function updateBoard(response) {
+	updatingBoard = true;
+	if (response.color === 'white') {
+		selectedCheckerType = whitecheckers;
+	} else {
+		selectedCheckerType = blackcheckers;
+	}
+	selectedPieceindex = response.piece_index
+	selectedPiece = selectedCheckerType[selectedPieceindex];
+	console.log(selectedPiece.id)
+	showMoves(selectedPiece.id)
+	makeMove(response.dest_square_index)
+	// whiteIsNext = response.white_is_next;
+	game_is_live = response.game_is_live;
+	console.log("updated info")
+	updatingBoard = false;
+}
