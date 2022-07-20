@@ -504,7 +504,15 @@ document.getElementsByTagName("BODY")[0].onresize = function() {
 	}
 }
 
-socket.disconnect();
+// default msg type 'connect'
+socket.on('connect', () => {
+    console.log("connected to server");
+});
+
+// default msg type 'disconnect'
+socket.on('disconnect', () => {
+    console.log("disconnected from server");
+});
 
 multiplayerBtn.addEventListener("click", () => {
     socket.emit("multiplayer");

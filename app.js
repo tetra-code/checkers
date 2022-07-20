@@ -73,12 +73,12 @@ const createMultiGame = (socket, clientID) => {
     return game;
 };
 
-// utility to check game the given gameID
-const checkGame = (clientID) => {
+// utility to check and remove game given clientID or gameID
+const removeGame = (id) => {
     let game;
     for (let i = 0; i < games.length; i++) {
         game = games[i];
-        if (game.player1 === clientID || game.player2 === clientID) {
+        if (game.player1 === id || game.player2 === id || game.gameId === id) {
             game.state = 0;
             console.log("removed game object");
         }
@@ -158,24 +158,24 @@ io.on("connection", (socket) => {
         // this returns the reason as 'client namespace disconnect' which
         // distinguishes from 'transport close'
         console.log(`Disconnected due to ${reason}`);
+        
+        //this is the default close
         if (reason === "transport close") {
-            const clientID = users[socket.id];
-            checkGame(clientID);
             delete users[socket.id];
             console.log("removed from users object");
-
             const url = socket.handshake.headers.referer;
-            // player left mid game or connection lost
-            // if it created a game, set it to 0
-            if (url.includes('/play/')) {
-                console.log(url);
-                const gameId = url.split('/play/');
-                console.log(gameId);
+            let id;
+            if (!url.includes('/play/')) {
+                // when in splash screen they could've made an empty
+                id = users[socket.id];
+            } else {
+                // player left mid game or connection lost
+                // if it created a game, set it to 0
+                id = url.split('/play/')[1];
             }
+            removeGame(id);
         }
     });
-    //below broadcasts to all connected sockets
-    // io.emit("new user just connected");
 });
 
 server.on("error", (err) => {
