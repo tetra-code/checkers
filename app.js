@@ -176,6 +176,20 @@ io.on("connection", (socket) => {
             removeGame(id);
         }
     });
+
+    socket.on("game_move", (payload) => {
+        //use the id from senders URL to transmit to only those related in the socket room
+        const gameId = socket.handshake.headers.referer.split('/play/')[1];
+        io.to(gameId).emit('game_move', payload);
+        console.log("sent game move")
+    });
+
+    socket.on("join_game", (gameID) => {
+        //all multiplayer game sockets leave their default room and join the game socket room using gameID
+        socket.join(gameID);
+        socket.leave(socket.id);
+    });
+
 });
 
 server.on("error", (err) => {

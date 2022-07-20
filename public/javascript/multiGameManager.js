@@ -27,7 +27,7 @@ const whitecheckers = [];
 const blackcheckers = [];
 
 let previousSquare;
-let newSquare;
+let currentSquare;
 let selectedCheckerType;
 let mustAttack = false;
 let gameOver = false;
@@ -40,6 +40,8 @@ let boardLimit,reverse_boardLimit, moveUpLeft,moveUpRight, moveDownLeft,moveDown
 const color = sessionStorage.getItem('color');
 console.log(color);
 let whiteIsNext = true;
+let gameIsLive = true;
+const gameID = window.location.href.split('/play/')[1];
 
 /*===================== checkers board adjustment =========================*/
 getDimension();
@@ -56,13 +58,12 @@ const squareGen = function(square, index) {
 	this.id = square;
 	this.occupied = false;
 	this.pieceId = undefined;
-    // ??
 	this.id.onclick = function() {
 		makeMove(index);
 	}
 }
 
-const checkerGen = function(piece,color,square) {
+const checkerGen = function(piece, color, square) {
 	this.id = piece;
 	this.color = color;
 	this.king = false;
@@ -333,15 +334,8 @@ function makeMove(index) {
 		 	if(gameOver) { setTimeout( declareWinner() ,3000) ; return false};
 		}
 	}
-
     broadcastMove();
 }
-
-function broadcastMove(payload) {
-    socket.emit("game_move", () => {
-
-    })
-};
 
 /*===========Utility methods to check and moving pieces=========*/
 function executeMove(X,Y,nSquare) {
@@ -355,30 +349,30 @@ function executeMove(X,Y,nSquare) {
 
 	// release the field that the piece occupies and occupy the one that it selected
 	previousSquare = box[selectedChecker.occupied_square];
-    newSquare = box[selectedChecker.occupied_square + nSquare];
+    currentSquare = box[selectedChecker.occupied_square + nSquare];
 
     // highlight previous and new squares
     highLightMove()
 
     previousSquare.occupied = false;	
-	newSquare.occupied = true;
-    newSquare.pieceId = previousSquare.pieceId;
+	currentSquare.occupied = true;
+    currentSquare.pieceId = previousSquare.pieceId;
 	previousSquare.pieceId = undefined; 	
 
 	selectedChecker.occupied_square += nSquare;
 }
 
 function highLightMove() {
-    if (previousSquare && newSquare) {
+    if (previousSquare && currentSquare) {
         previousSquare.id.style.background = "#a2ea8c";
-        newSquare.id.style.background = "#a2ea8c";
+        currentSquare.id.style.background = "#a2ea8c";
     }
 }
 
 function eraseHighlights() {
-    if (previousSquare && newSquare) {
+    if (previousSquare && currentSquare) {
         previousSquare.id.style.background = "#BA7A3A";
-        newSquare.id.style.background = "#BA7A3A";
+        currentSquare.id.style.background = "#BA7A3A";
     }
 }
 
@@ -393,7 +387,11 @@ function checkMove(Apiece,tLimit,tLimit_Side,moveDirection,theDirection){
 }
 
 function checkAttack( check , X, Y , negX , negY, squareMove, direction) {
-	if (check.coordX * negX >= 	X * negX && check.coordY *negY <= Y * negY && box[check.occupied_square + squareMove ].occupied && box[check.occupied_square + squareMove].pieceId.color != check.color && !box[check.occupied_square + squareMove * 2 ].occupied){
+	if (check.coordX * negX >= 	X * negX && 
+		check.coordY *negY <= Y * negY && 
+		box[check.occupied_square + squareMove ].occupied && 
+		box[check.occupied_square + squareMove].pieceId.color != check.color && 
+		!box[check.occupied_square + squareMove * 2 ].occupied) {
 		mustAttack = true;
 		direction = check.occupied_square +  squareMove*2 ;
 		box[direction].id.style.background = "#704923";
@@ -443,19 +441,19 @@ function hasAttackMoves(checker) {
  	return false;
 }
 
-function changeTurns(checker){
+function changeTurns(checker) {
 	if (checker.color === "white") selectedCheckerType = blackcheckers;
     else selectedCheckerType = whitecheckers;
 }
 
-function checkIfLost(){
+function checkIfLost() {
 	for(let i = 1 ; i <= 12; i++)
 		if(selectedCheckerType[i].alive)
 			return false;
 	return true;
 }
 
-function checkForMoves(){
+function checkForMoves() {
 	for(let i = 1 ; i <= 12; i++)
 		if (selectedCheckerType[i].alive && showMoves(selectedCheckerType[i].id)) {
 			eraseRoads();
@@ -504,9 +502,21 @@ document.getElementsByTagName("BODY")[0].onresize = function() {
 	}
 }
 
+function broadcastMove(previousSquare, currentSquare) {
+	const payload = {
+		'previous_square': previousSquare,
+		'current_square': currentSquare,
+		'color': color,
+		'white_is_next': whiteIsNext,
+		'game_is_live': gameIsLive
+	}
+    socket.emit("game_move", JSON.stringify(payload));
+};
+
 // default msg type 'connect'
 socket.on('connect', () => {
     console.log("connected to server");
+	socket.emit("join_game", gameID);
 });
 
 // default msg type 'disconnect'
@@ -514,6 +524,15 @@ socket.on('disconnect', () => {
     console.log("disconnected from server");
 });
 
-multiplayerBtn.addEventListener("click", () => {
-    socket.emit("multiplayer");
-})
+socket.on('game_move', (payload) => {
+	console.log('received game move')
+	const response = JSON.parse(payload);
+	//only accept if its from opponent
+	console.log(response);
+	if (color !== response.color) {
+		previousSquare = response.previous_square;
+		currentSquare = response.current_square;
+		whiteIsNext = response.white_is_next;
+		game_is_live = response.game_is_live;
+	}
+});
