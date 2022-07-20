@@ -1,39 +1,489 @@
-const boxB8 = document.getElementById('b8');
-const boxD8 = document.getElementById('a8');
-const boxF8 = document.getElementById('a8');
-const boxH8 = document.getElementById('a8');
+/*===================== Global variables =========================*/
+const square_class = document.getElementsByClassName("square");
+const white_checker_class = document.getElementsByClassName("white_checker");
+const black_checker_class = document.getElementsByClassName("black_checker");
+const board = document.getElementById("board");
+const score = document.getElementById("score");
+const black_background = document.getElementById("black_background");
+const moveSound = document.getElementById("moveSound");
+const winSound = document.getElementById("winSound");
 
-const boxA7 = document.getElementById('a7');
-const boxC7 = document.getElementById('c7');
-const boxE7 = document.getElementById('e7');
-const boxG7 = document.getElementById('g7');
+let windowHeight, windowWidth;
+let moveLength = 80 ;
+let moveDeviation = 10;
+// var Dimension = 1;
+let contor = 0;
+let bigScreen = 1;
 
-const boxB6 = document.getElementById('b6');
-const boxD6 = document.getElementById('d6');
-const boxF6 = document.getElementById('f6');
-const boxH6 = document.getElementById('h6');
+let selectedPiece, selectedPieceindex;
+let upRight, upLeft, downLeft, downRight; 
 
-const boxA5 = document.getElementById('a5');
-const boxC5 = document.getElementById('c5');
-const boxE5 = document.getElementById('e5');
-const boxG5 = document.getElementById('g5');
+const box = [];
+const whitecheckers = [];
+const blackcheckers = [];
 
-const boxB4 = document.getElementById('b4');
-const boxD4 = document.getElementById('d4');
-const boxF4 = document.getElementById('f4');
-const boxH4 = document.getElementById('h4');
+let previousSquare;
+let newSquare;
+let selectedCheckerType;
+let mustAttack = false;
+let gameOver = false;
+let multiplier = 1  //to determine whether jump 2 rows for attack or jump 1 row for moving
+let oneMove; //to move once for 1 jump
+let anotherMove; //to move twice for attack
+let boardLimit,reverse_boardLimit, moveUpLeft,moveUpRight, moveDownLeft,moveDownRight, boardLimitLeft, boardLimitRight;
 
-const boxA3 = document.getElementById('a3');
-const boxC3 = document.getElementById('c3');
-const boxE3 = document.getElementById('e3');
-const boxG3 = document.getElementById('g3');
+/*===================== checkers board adjustment =========================*/
+getDimension();
+if (windowWidth > 640) {
+    moveLength = 80;
+    moveDeviation = 10;
+} else {
+    moveLength = 50;
+    moveDeviation = 6;
+}
 
-const boxB2 = document.getElementById('b2');
-const boxD2 = document.getElementById('d2');
-const boxF2 = document.getElementById('f2');
-const boxH2 = document.getElementById('h2');
+/*================Class constructors===============*/
+const squareGen = function(square, index) {
+	this.id = square;
+	this.occupied = false;
+	this.pieceId = undefined;
+    // ??
+	this.id.onclick = function() {
+		makeMove(index);
+	}
+}
 
-const boxA1 = document.getElementById('a1');
-const boxC1 = document.getElementById('c1');
-const boxE1 = document.getElementById('e1');
-const boxG1 = document.getElementById('g1');
+const checkerGen = function(piece,color,square) {
+	this.id = piece;
+	this.color = color;
+	this.king = false;
+	this.occupied_square = square;
+	this.alive = true;
+	if (square % 8 ) {
+		this.coordX= square % 8;
+		this.coordY = Math.floor(square/8) + 1 ;
+	} else {
+		this.coordX = 8;
+		this.coordY = square/8 ;
+	}
+	this.id.onclick = function () {
+		showMoves(piece);	
+	}
+}
+
+checkerGen.prototype.setCoord = function() {
+	let x = (this.coordX - 1  ) * moveLength + moveDeviation;
+	let y = (this.coordY - 1 ) * moveLength  + moveDeviation;
+	this.id.style.top = y + 'px';
+	this.id.style.left = x + 'px';
+}
+
+checkerGen.prototype.changeCoord = function(X,Y){
+	this.coordY += Y ;
+	this.coordX += X;
+}
+
+checkerGen.prototype.checkIfKing = function () {
+	if(this.coordY == 8 && !this.king && this.color == "white"){
+		this.king = true;
+		this.id.style.border = "4px solid #FFFF00";
+	}
+	if(this.coordY == 1 && !this.king &&this.color == "black"){
+		this.king = true;
+		this.id.style.border = "4px solid #FFFF00";
+	}
+}
+
+/*==========================Setup game board=================================*/
+// for class query, index starts at 1
+for (let i = 1; i <= 64; i++) {
+	box[i] = new squareGen(square_class[i], i);
+}
+
+/*=========================Setup game checker pieces =========================*/
+//setup white pieces
+for (var i = 1; i <= 4; i++){
+	whitecheckers[i] = new checkerGen(white_checker_class[i], "white", 2*i -1 );
+	whitecheckers[i].setCoord(0,0);
+	box[2*i - 1].occupied = true;
+	box[2*i - 1].pieceId =whitecheckers[i];
+}
+
+for (var i = 5; i <= 8; i++){
+	whitecheckers[i] = new checkerGen(white_checker_class[i], "white", 2*i );
+	whitecheckers[i].setCoord(0,0);
+	box[2*i].occupied = true;
+	box[2*i].pieceId = whitecheckers[i];
+}
+
+for (var i = 9; i <= 12; i++){
+	whitecheckers[i] = new checkerGen(white_checker_class[i], "white", 2*i - 1 );
+	whitecheckers[i].setCoord(0,0);
+	box[2*i - 1].occupied = true;
+	box[2*i - 1].pieceId = whitecheckers[i];
+}
+
+//setup black pieces
+for (var i = 1; i <= 4; i++){
+	blackcheckers[i] = new checkerGen(black_checker_class[i], "black", 56 + 2*i  );
+	blackcheckers[i].setCoord(0,0);
+	box[56 +  2*i ].occupied = true;
+	box[56+  2*i ].pieceId =blackcheckers[i];
+}
+
+for (var i = 5; i <= 8; i++){
+	blackcheckers[i] = new checkerGen(black_checker_class[i], "black", 40 +  2*i - 1 );
+	blackcheckers[i].setCoord(0,0);
+	box[ 40 + 2*i - 1].occupied = true;
+	box[ 40 + 2*i - 1].pieceId = blackcheckers[i];
+}
+
+for (var i = 9; i <= 12; i++){
+	blackcheckers[i] = new checkerGen(black_checker_class[i], "black", 24 + 2*i  );
+	blackcheckers[i].setCoord(0,0);
+	box[24 + 2*i ].occupied = true;
+	box[24 + 2*i ].pieceId = blackcheckers[i];
+}
+
+/*=====================Selected checker=====================*/
+selectedCheckerType = whitecheckers;
+// selectedCheckerType = blackcheckers;
+
+function showMoves(piece) {
+	let match = false;
+	mustAttack = false;
+	if (selectedPiece) {
+        eraseRoads();
+        // necessary to still display previous move made by opponent
+        highLightMove();
+    }
+	selectedPiece = piece;
+	let i; // retine indicele damei
+	for (let j = 1; j <= 12; j++) {
+		if(selectedCheckerType[j].id == piece) {
+			i = j;
+			selectedPieceindex = j;
+			match = true;
+		}
+	}
+    const selectedCheckerPiece = selectedCheckerType[i];
+
+    // for when multiple moves (multiple hits) are avilable
+	if (oneMove && !hasAttackMoves(oneMove)) {
+		changeTurns(oneMove);
+		oneMove = undefined;
+		return false;
+	}
+
+	if (oneMove && oneMove != selectedCheckerPiece) return false;
+
+    //if no match was found; it happens when for example red moves and you press black
+	if (!match) return false; 
+
+	//depending on the color, set the edges and movements of the pieces
+	if (selectedCheckerPiece.color =="white") {
+		boardLimit = 8;
+		boardLimitRight = 1;
+		boardLimitLeft = 8;
+		moveUpRight = 7;
+		moveUpLeft = 9;
+		moveDownRight = - 9;
+		moveDownLeft = -7;
+	} else {
+		boardLimit = 1;
+		boardLimitRight = 8;
+		boardLimitLeft = 1;
+		moveUpRight = -7;
+		moveUpLeft = -9;
+		moveDownRight = 9;
+		moveDownLeft = 7;
+	}
+
+ 	// check if you can attack
+	hasAttackMoves(selectedCheckerPiece)
+	
+	// if can't attack move it
+ 	if (!mustAttack) {
+ 	    downLeft = checkMove( selectedCheckerPiece , boardLimit , boardLimitRight , moveUpRight , downLeft);
+		downRight = checkMove(selectedCheckerPiece , boardLimit , boardLimitLeft , moveUpLeft , downRight);
+		if (selectedCheckerPiece.king) {
+			upLeft = checkMove( selectedCheckerPiece , reverse_boardLimit , boardLimitRight , moveDownRight , upLeft);
+			upRight = checkMove( selectedCheckerPiece, reverse_boardLimit , boardLimitLeft , moveDownLeft, upRight);
+		}
+	}
+	if (downLeft || downRight || upLeft || upRight) return true;
+	return false;
+}
+
+/**
+ * Removes the highlighted moveable places of selected checker piece
+ */
+function eraseRoads() {
+	if(downRight) box[downRight].id.style.background = "#BA7A3A";
+	if(downLeft) box[downLeft].id.style.background = "#BA7A3A";
+	if(upRight) box[upRight].id.style.background = "#BA7A3A";
+	if(upLeft) box[upLeft].id.style.background = "#BA7A3A";
+}
+		
+/*==================Actually moving checker pieces================*/
+
+function makeMove(index) {
+    let selectedCheckerPiece = selectedCheckerType[1];
+	let isMove = false;
+    //if the game has just started and no track has been selected
+	if (!selectedPiece) return false;
+	if (index != upLeft && index != upRight && index != downLeft && index != downRight) {
+		eraseRoads();
+		selectedPiece = undefined;
+		return false;
+	}
+    
+    // perspective is of the moving player
+	if (selectedCheckerPiece.color=="white") {
+		cpy_downRight = upRight;
+		cpy_downLeft = upLeft;
+		cpy_upLeft = downLeft;
+		cpy_upRight = downRight;
+	} else{
+		cpy_downRight = upLeft;
+		cpy_downLeft = upRight;
+		cpy_upLeft = downRight;
+		cpy_upRight = downLeft;
+	}  
+
+	if(mustAttack) multiplier = 2;
+	else multiplier = 1;
+
+    if (index == cpy_upRight) {
+        isMove = true;		
+        if(selectedCheckerPiece.color=="white"){
+            // muta piesa
+            executeMove( multiplier * 1, multiplier * 1, multiplier * 9 );
+            //elimina piesa daca a fost executata o saritura
+            if(mustAttack) eliminateCheck(index - 9);
+        }
+        else{
+            executeMove( multiplier * 1, multiplier * -1, multiplier * -7);
+            if(mustAttack) eliminateCheck( index + 7 );
+        }
+    }
+
+    if (index == cpy_upLeft) {
+        isMove = true;
+        if(selectedCheckerPiece.color=="white"){
+            executeMove( multiplier * -1, multiplier * 1, multiplier * 7);
+            if(mustAttack)	eliminateCheck(index - 7 );				
+        }
+        else{
+            executeMove( multiplier * -1, multiplier * -1, multiplier * -9);
+            if (mustAttack) eliminateCheck( index + 9 );
+        }
+    }
+
+    if (index == cpy_downRight) {
+        isMove = true;
+        if (selectedCheckerPiece.color=="white") {
+            executeMove( multiplier * 1, multiplier * -1, multiplier * -7);
+            if(mustAttack) eliminateCheck ( index  + 7) ;
+        } else {
+            executeMove( multiplier * 1, multiplier * 1, multiplier * 9);
+            if(mustAttack) eliminateCheck ( index  - 9) ;
+        }
+    }
+
+    if (index == cpy_downLeft) {
+        isMove = true;
+        if (selectedCheckerPiece.color=="white") {
+            executeMove( multiplier * -1, multiplier * -1, multiplier * -9);
+            if (mustAttack) eliminateCheck ( index  + 9);
+        } else {
+            executeMove( multiplier * -1, multiplier * 1, multiplier * 7);
+            if (mustAttack) eliminateCheck ( index  - 7);
+        }
+    }
+    
+    // for when hit is made, need to erase roads
+	eraseRoads();
+	selectedCheckerType[selectedPieceindex].checkIfKing();
+
+	// change the turn
+	if (isMove) {
+		anotherMove = undefined;
+		if (mustAttack) {
+			anotherMove = hasAttackMoves(selectedCheckerType[selectedPieceindex]);
+		}
+		if (anotherMove){
+			oneMove = selectedCheckerType[selectedPieceindex];
+			showMoves(oneMove);
+		} else {
+			oneMove = undefined;
+		 	changeTurns(selectedCheckerPiece);
+		 	gameOver = checkIfLost();
+		 	if(gameOver) { setTimeout( declareWinner(),3000 ); return false};
+		 	gameOver = checkForMoves();
+		 	if(gameOver) { setTimeout( declareWinner() ,3000) ; return false};
+		}
+	}
+}
+
+/*===========Utility methods to check and moving pieces=========*/
+function executeMove(X,Y,nSquare) {
+    // erase previous highlighted move
+    eraseHighlights()
+
+	// exchange coordinates of moved parts
+    let selectedChecker = selectedCheckerType[selectedPieceindex];
+	selectedChecker.changeCoord(X,Y); 
+	selectedChecker.setCoord(0,0);
+
+	// release the field that the piece occupies and occupy the one that it selected
+	previousSquare = box[selectedChecker.occupied_square];
+    newSquare = box[selectedChecker.occupied_square + nSquare];
+
+    // highlight previous and new squares
+    highLightMove()
+
+    previousSquare.occupied = false;	
+	newSquare.occupied = true;
+    newSquare.pieceId = previousSquare.pieceId;
+	previousSquare.pieceId = undefined; 	
+
+	selectedChecker.occupied_square += nSquare;
+}
+
+function highLightMove() {
+    if (previousSquare && newSquare) {
+        previousSquare.id.style.background = "#a2ea8c";
+        newSquare.id.style.background = "#a2ea8c";
+    }
+}
+
+function eraseHighlights() {
+    if (previousSquare && newSquare) {
+        previousSquare.id.style.background = "#BA7A3A";
+        newSquare.id.style.background = "#BA7A3A";
+    }
+}
+
+function checkMove(Apiece,tLimit,tLimit_Side,moveDirection,theDirection){
+	if(Apiece.coordY != tLimit){
+		if(Apiece.coordX != tLimit_Side && !box[ Apiece.occupied_square + moveDirection ].occupied){
+			box[ Apiece.occupied_square + moveDirection ].id.style.background = "#704923";
+			theDirection = Apiece.occupied_square + moveDirection;
+		} else theDirection = undefined;
+	} else theDirection = undefined;
+	return theDirection;
+}
+
+function checkAttack( check , X, Y , negX , negY, squareMove, direction) {
+	if (check.coordX * negX >= 	X * negX && check.coordY *negY <= Y * negY && box[check.occupied_square + squareMove ].occupied && box[check.occupied_square + squareMove].pieceId.color != check.color && !box[check.occupied_square + squareMove * 2 ].occupied){
+		mustAttack = true;
+		direction = check.occupied_square +  squareMove*2 ;
+		box[direction].id.style.background = "#704923";
+		return direction ;
+	} 
+    direction =  undefined;
+    return direction;
+}
+
+function eliminateCheck(index) {
+	if (index < 1 || index > 64) return  0;
+	let x = box[index].pieceId ;
+	x.alive =false;
+	box[index].occupied = false;
+	x.id.style.display  = "none";
+}
+	
+function hasAttackMoves(checker) {
+    upRight = checkAttack( checker , 6, 3 , -1 , -1 , -7, upRight );
+    upLeft = checkAttack( checker, 3 , 3 , 1 , -1 , -9 , upLeft );
+    downLeft = checkAttack( checker , 3, 6, 1 , 1 , 7 , downLeft );
+    downRight = checkAttack( checker , 6 , 6 , -1, 1 ,9 , downRight );
+
+    // ??
+    // boolean value of undefined is false
+ 	if (checker.color === "black" && (upRight || upLeft || downLeft || downRight)) {
+	 	let p = upLeft;
+	 	upLeft = downLeft;
+	 	downLeft = p;
+
+	 	p = upRight;
+	 	upRight = downRight;
+	 	downRight = p;
+
+	 	p = downLeft ;
+	 	downLeft = downRight;
+	 	downRight = p;
+
+	 	p = upRight ;
+	 	upRight = upLeft;
+	 	upLeft = p;
+ 	}
+
+ 	if (upLeft != undefined || upRight != undefined || downRight != undefined || downLeft != undefined) {
+ 		return true;
+ 	}
+ 	return false;
+}
+
+function changeTurns(checker){
+	if (checker.color === "white") selectedCheckerType = blackcheckers;
+    else selectedCheckerType = whitecheckers;
+}
+
+function checkIfLost(){
+	for(let i = 1 ; i <= 12; i++)
+		if(selectedCheckerType[i].alive)
+			return false;
+	return true;
+}
+
+function checkForMoves(){
+	for(let i = 1 ; i <= 12; i++)
+		if (selectedCheckerType[i].alive && showMoves(selectedCheckerType[i].id)) {
+			eraseRoads();
+			return false;
+		}
+	return true;
+}
+
+function declareWinner() {
+	black_background.style.display = "inline";
+	score.style.display = "box";
+    if (selectedCheckerType[1].color == "white") score.innerHTML = "Black wins";
+    else score.innerHTML = "Red wins";
+}
+
+function getDimension() {
+	contor++;
+    windowHeight = window.innerHeight|| document.documentElement.clientHeight || document.body.clientHeight;
+    windowWidth =  window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+}
+
+
+/**
+ * To resize board based on display size 
+ */
+document.getElementsByTagName("BODY")[0].onresize = function() {
+	getDimension();
+	var cpy_bigScreen = bigScreen ;
+
+    if(windowWidth < 650) {
+		moveLength = 50;
+		moveDeviation = 6; 
+		if(bigScreen == 1) bigScreen = -1;
+	}
+
+    if(windowWidth > 650) {
+		moveLength = 80;
+		moveDeviation = 10; 
+		if(bigScreen == -1) bigScreen = 1;
+	}
+
+	if(bigScreen !== cpy_bigScreen) {
+        for(let i = 1; i <= 12; i++){
+            blackcheckers[i].setCoord(0,0);
+            whitecheckers[i].setCoord(0,0);
+        }
+	}
+}
