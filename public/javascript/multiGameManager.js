@@ -1,7 +1,6 @@
 const wsProtocol = location.protocol.includes('https') ? 'wss:' : 'ws:';
 const socket = io();
 
-/*===================== Global variables =========================*/
 const splashBtn = document.getElementById('splashBtn');
 const square_class = document.getElementsByClassName("square");
 const white_checker_class = document.getElementsByClassName("white_checker");
@@ -9,31 +8,27 @@ const black_checker_class = document.getElementsByClassName("black_checker");
 const board = document.getElementById("board");
 const score = document.getElementById("score");
 const black_background = document.getElementById("black_background");
-const moveSound = document.getElementById("moveSound");
-const winSound = document.getElementById("winSound");
+const color = sessionStorage.getItem('color');
+const gameID = window.location.href.split('/play/')[1];
 
 let windowHeight, windowWidth;
 let moveLength = 80 ;
 let moveDeviation = 10;
-// var Dimension = 1;
 let contor = 0;
 let bigScreen = 1;
-
-let updatingBoard = false;
-
-let selectedPiece, selectedPieceindex;
-let upRight, upLeft, downLeft, downRight; 
 
 const box = [];
 const whitecheckers = [];
 const blackcheckers = [];
+
+let selectedPiece, selectedPieceindex;
+let upRight, upLeft, downLeft, downRight; 
+let updatingBoard = false;
+let whiteIsNext = true;
 let previousSquare;
 let currentSquare;
 let currentSquareIndex;
-
 let toUpdateSqaureIndex;
-
-let movedSquares;
 let selectedChecker;
 let selectedCheckerType;
 let mustAttack = false;
@@ -42,23 +37,6 @@ let multiplier = 1  //to determine whether jump 2 rows for attack or jump 1 row 
 let oneMove; //to move once for 1 jump
 let anotherMove; //to move twice for attack
 let boardLimit,reverse_boardLimit, moveUpLeft,moveUpRight, moveDownLeft,moveDownRight, boardLimitLeft, boardLimitRight;
-
-// white always goes first
-const color = sessionStorage.getItem('color');
-console.log(color);
-let whiteIsNext = true;
-let gameIsLive = true;
-const gameID = window.location.href.split('/play/')[1];
-
-/*===================== checkers board adjustment =========================*/
-getDimension();
-if (windowWidth > 640) {
-    moveLength = 80;
-    moveDeviation = 10;
-} else {
-    moveLength = 50;
-    moveDeviation = 6;
-}
 
 /*================Class constructors===============*/
 const squareGen = function(square, index) {
@@ -162,7 +140,50 @@ for (var i = 9; i <= 12; i++){
 	box[24 + 2*i ].pieceId = blackcheckers[i];
 }
 
-/*=====================Selected checker=====================*/
+
+//=====================Board resizing based on window size================//
+
+const getDimension = () => {
+	contor++;
+    windowHeight = window.innerHeight|| document.documentElement.clientHeight || document.body.clientHeight;
+    windowWidth =  window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+}
+
+getDimension();
+if (windowWidth > 640) {
+    moveLength = 80;
+    moveDeviation = 10;
+} else {
+    moveLength = 50;
+    moveDeviation = 6;
+}
+
+document.getElementsByTagName("BODY")[0].onresize = function() {
+	getDimension();
+	var cpy_bigScreen = bigScreen ;
+
+    if(windowWidth < 650) {
+		moveLength = 50;
+		moveDeviation = 6; 
+		if(bigScreen == 1) bigScreen = -1;
+	}
+
+    if(windowWidth > 650) {
+		moveLength = 80;
+		moveDeviation = 10; 
+		if(bigScreen == -1) bigScreen = 1;
+	}
+
+	if(bigScreen !== cpy_bigScreen) {
+        for(let i = 1; i <= 12; i++){
+            blackcheckers[i].setCoord(0,0);
+            whitecheckers[i].setCoord(0,0);
+        }
+	}
+}
+
+
+/*=====================Select checkers=====================*/
 if (color === 'white') {
 	selectedCheckerType = whitecheckers;
 } else {
@@ -257,8 +278,11 @@ function eraseRoads() {
 	if(upLeft) box[upLeft].id.style.background = "#BA7A3A";
 }
 		
-/*==================Actually moving checker pieces================*/
 
+/*==================Moving checker pieces================*/
+
+// physically moves the checker pieces. Later make it more efficient,
+// it is at the moment super method
 function makeMove(index) {
     let selectedCheckerPiece = selectedCheckerType[1];
 	let isMove = false;
@@ -337,26 +361,30 @@ function makeMove(index) {
 	selectedCheckerType[selectedPieceindex].checkIfKing();
 
 	// change the turn 
-	// may not be necessary
 	if (isMove) {
 		anotherMove = undefined;
 		if (mustAttack) {
 			anotherMove = hasAttackMoves(selectedCheckerType[selectedPieceindex]);
 		}
+
 		if (anotherMove){
 			oneMove = selectedCheckerType[selectedPieceindex];
 			showMoves(oneMove);
-		} else {
+		} else { // check if game is finished
 			oneMove = undefined;
 		 	changeTurns(selectedCheckerPiece);
 		 	gameOver = checkIfLost();
-		 	if(gameOver) { setTimeout( declareWinner(),3000 ); return false};
+		 	if (gameOver) { 
+				setTimeout(declareWinner(),3000 ); 
+				return false};
 		 	gameOver = checkForMoves();
-		 	if(gameOver) { setTimeout( declareWinner() ,3000) ; return false};
+		 	if (gameOver) { 
+				setTimeout(declareWinner(),3000); 
+				return false};
 		}
 	}
 	whiteIsNext = !whiteIsNext;
-	console.log("made move")
+
 	// don't braodcast if you're updating
 	if (!updatingBoard) {
 		broadcastMove();
@@ -444,8 +472,6 @@ function hasAttackMoves(checker) {
     downLeft = checkAttack( checker , 3, 6, 1 , 1 , 7 , downLeft );
     downRight = checkAttack( checker , 6 , 6 , -1, 1 ,9 , downRight );
 
-    // ??
-    // boolean value of undefined is false
  	if (checker.color === "black" && (upRight || upLeft || downLeft || downRight)) {
 	 	let p = upLeft;
 	 	upLeft = downLeft;
@@ -491,79 +517,6 @@ function checkForMoves() {
 	return true;
 }
 
-function declareWinner() {
-	black_background.style.display = "inline";
-	score.style.display = "box";
-    if (selectedCheckerType[1].color == "white") score.innerHTML = "Black wins";
-    else score.innerHTML = "Red wins";
-}
-
-function getDimension() {
-	contor++;
-    windowHeight = window.innerHeight|| document.documentElement.clientHeight || document.body.clientHeight;
-    windowWidth =  window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-}
-
-/**
- * To resize board based on display size 
- */
-document.getElementsByTagName("BODY")[0].onresize = function() {
-	getDimension();
-	var cpy_bigScreen = bigScreen ;
-
-    if(windowWidth < 650) {
-		moveLength = 50;
-		moveDeviation = 6; 
-		if(bigScreen == 1) bigScreen = -1;
-	}
-
-    if(windowWidth > 650) {
-		moveLength = 80;
-		moveDeviation = 10; 
-		if(bigScreen == -1) bigScreen = 1;
-	}
-
-	if(bigScreen !== cpy_bigScreen) {
-        for(let i = 1; i <= 12; i++){
-            blackcheckers[i].setCoord(0,0);
-            whitecheckers[i].setCoord(0,0);
-        }
-	}
-}
-
-function broadcastMove() {
-	console.log(toUpdateSqaureIndex)
-	console.log(selectedCheckerType[selectedPieceindex])
-	const payload = {
-		'piece_index': toUpdateSqaureIndex,
-		'dest_square_index': currentSquareIndex,
-		'color': color,
-		'white_is_next': whiteIsNext,
-		'game_is_live': gameIsLive
-	}
-    socket.emit("game_move", JSON.stringify(payload));
-};
-
-// default msg type 'connect'
-socket.on('connect', () => {
-    console.log("connected to server");
-	socket.emit("join_game", gameID);
-});
-
-// default msg type 'disconnect'
-socket.on('disconnect', () => {
-    console.log("disconnected from server");
-});
-
-socket.on('game_move', (payload) => {
-	console.log('received game move')
-	const response = JSON.parse(payload);
-	//only accept if its from opponent
-	if (color !== response.color) {
-		updateBoard(response);
-	}
-});
-
 function updateBoard(response) {
 	updatingBoard = true;
 	if (response.color === 'white') {
@@ -573,11 +526,41 @@ function updateBoard(response) {
 	}
 	selectedPieceindex = response.piece_index
 	selectedPiece = selectedCheckerType[selectedPieceindex];
-	console.log(selectedPiece.id)
 	showMoves(selectedPiece.id)
 	makeMove(response.dest_square_index)
 	// whiteIsNext = response.white_is_next;
 	game_is_live = response.game_is_live;
-	console.log("updated info")
 	updatingBoard = false;
 }
+
+function declareWinner() {
+	black_background.style.display = "inline";
+	score.style.display = "box";
+    if (selectedCheckerType[1].color == "white") score.innerHTML = "White wins";
+    else score.innerHTML = "Black wins";
+}
+
+//===================Websocket connection handlers===================== 
+socket.on('connect', () => {
+	socket.emit("join_game", gameID);
+});
+socket.on('disconnect', () => {
+    console.log("disconnected from server");
+});
+
+socket.on('game_move', (payload) => {
+	const response = JSON.parse(payload);
+	//only accept if its from opponent
+	if (color !== response.color) {
+		updateBoard(response);
+	}
+});
+
+function broadcastMove() {
+	const payload = {
+		'piece_index': toUpdateSqaureIndex,
+		'dest_square_index': currentSquareIndex,
+		'color': color,
+	}
+    socket.emit("game_move", JSON.stringify(payload));
+};
