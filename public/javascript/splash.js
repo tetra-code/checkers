@@ -1,20 +1,16 @@
 const wsProtocol = location.protocol.includes('https') ? 'wss:' : 'ws:';
 const socket = io(`${wsProtocol}//${location.host}`);
-let gameId;
-let userId = sessionStorage.getItem('id');
 
 const singleplayerBtn = document.getElementById('singleplayer');
 const multiplayerBtn = document.getElementById('multiplayer');
 const howToPlayBtn = document.getElementById('howToPlayBtn');
 
+let gameId;
+let userId = sessionStorage.getItem('id');
+
 // default msg type 'connect'
 socket.on('connect', () => {
     console.log("connected to server");
-});
-
-// default msg type 'disconnect'
-socket.on('disconnect', () => {
-    console.log("disconnected from server");
 });
 
 // checks for client ID in sesion storage
@@ -22,16 +18,13 @@ socket.on('clientID', (clientID) => {
     console.log(userId);
     if (userId === null) {
         sessionStorage.setItem('id', clientID);
-        console.log("Set client ID");
         socket.emit("setID")
     } else {
-        console.log("Client ID already exists");
         socket.emit("existsID", userId);
     }
 });
 
-//player1 is white
-//player2 is black
+//player1 is white, playey2 is black
 socket.on('color', (color) => {
     console.log(color);
     sessionStorage.setItem('color', color);
@@ -48,9 +41,11 @@ socket.on('start', (gameId) => {
 
 //add event listeners
 singleplayerBtn.addEventListener("click", () => {
+    sessionStorage.setItem('game_mode', 'singleplayer');
     socket.emit("singleplayer");
 });
 
 multiplayerBtn.addEventListener("click", () => {
+    sessionStorage.setItem('game_mode', 'multiplayer');
     socket.emit("multiplayer");
 })

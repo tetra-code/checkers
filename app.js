@@ -50,26 +50,22 @@ const guid = () => {
 
 // generates empty game objects for singleplayer
 const createSingleGame = (clientID) => {
-    const game = new pairing();
-    game.gameId = guid();
+    const game = new pairing(guid());
     game.state = 1;
     game.player1 = clientID;
     games.push(game);
-    console.log("created singleplayer game")
     return game.gameId;
 };
 
 // generates empty game objects for multiplayer
 const createMultiGame = (socket, clientID) => {
-    const game = new pairing();
-    game.gameId = guid();
+    const game = new pairing(guid());
     game.state = 2;
     game.player1 = clientID;
     games.push(game);
     socket.join(game.gameId);
     // socket.leave(socket.id);
     socket.emit('color', 'white');
-    console.log("generated new multiplayer game");
     return game;
 };
 
@@ -85,7 +81,8 @@ const removeGame = (id) => {
     }
 };
 
-// check or generate empty game objects for multiplayer
+// check or generate empty game objects for multiplayer and subscribe them to
+// new socket rooms
 const checkForMultiGame = (socket, clientID) => {
     // looks for already created multiplayer game needing a second player
     let game;
@@ -106,6 +103,17 @@ const checkForMultiGame = (socket, clientID) => {
     }
     return;
 };
+
+const findGame = (id) => {
+    let game;
+    for (let i = 0; i < games.length; i++) {
+        game = games[i];
+        if (game.gameId === id) {
+            return game;
+        }
+    }
+    return;
+}
 
 //===================Creating servers and requests handling==================//
 const server = http.createServer(app);
@@ -134,8 +142,8 @@ io.on("connection", (socket) => {
         const game = checkForMultiGame(socket, clientID);
         if (game !== undefined && alreadyCreatedMultiGame) {
             game.state === 0;
-            console.log("deleting game")
             // removeGame(game.gameId)
+            console.log("deleting game")
         }
         const gameId = createSingleGame(clientID);
         socket.emit("start", gameId);
@@ -154,21 +162,15 @@ io.on("connection", (socket) => {
     socket.on("disconnect", (reason) => {
         // when moving to /play, all clients are programmed to disconnect manually.
         // this returns the reason as 'client namespace disconnect' which
-        // distinguishes from 'transport close'
-        console.log(`Disconnected due to ${reason}`);
-        
-        //this is the default close
+        // distinguishes from connection loss 'transport close'
         if (reason === "transport close") {
             delete users[socket.id];
-            console.log("removed from users object");
             const url = socket.handshake.headers.referer;
             let id;
+            // remove games associated with the lost user
             if (!url.includes('/play/')) {
-                // when in splash screen they could've made an empty
                 id = users[socket.id];
             } else {
-                // player left mid game or connection lost
-                // if it created a game, set it to 0
                 id = url.split('/play/')[1];
             }
             removeGame(id);
@@ -179,15 +181,13 @@ io.on("connection", (socket) => {
         //use the id from senders URL to transmit to only those related in the socket room
         const gameId = socket.handshake.headers.referer.split('/play/')[1];
         io.to(gameId).emit('game_move', payload);
-        console.log("sent game move")
     });
 
     socket.on("join_game", (gameID) => {
-        //all multiplayer game sockets leave their default room and join the game socket room using gameID
+        // all game sockets leave their default room and join the game socket room using gameID
         socket.join(gameID);
         socket.leave(socket.id);
     });
-
 });
 
 server.on("error", (err) => {
