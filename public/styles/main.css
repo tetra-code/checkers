@@ -42,7 +42,7 @@ body, html {
 }
 
 /* Game screen */
-.square{
+.square {
     float: left;
     width: 80px;
     height: 80px;
@@ -55,10 +55,6 @@ body, html {
 .black_square {
     background:var(--color-secondary);
 }
-
-/* .clear_float {
-    clear: both;
-} */
 
 .board {
     position: relative;
@@ -74,9 +70,7 @@ body, html {
     height: 54px;
     border-radius: 50%;
     position: absolute;
-    border: 4px solid white;
     cursor: pointer;	
-    z-index: 2;
 }
 
 .white_checker {
@@ -94,13 +88,3 @@ body, html {
     -o-transition: 0.3s ease-in-out;
     transition: 0.3s ease-in-out;
 }
-
-/* .black_background {
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    background-color: black;
-    opacity: 0.5;
-    z-index:  7;
-    display: none;
-} */

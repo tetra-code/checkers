@@ -10,8 +10,34 @@
     <div>
         Welcome to checkers splash page
     </div>
+    <br>
     <button id="singleplayer">Singleplayer</button>
-    <button id="multiplayer">multiplayer</button>
+    <button id="multiplayer">Multiplayer</button>
+    <br>
+    <div class="howtoPlay">
+        <div class="howtoPlay-header">
+            <div class='title'>How to play checkers</div>
+        </div> 
+        <div class="howtoPlay-body">
+            <br>
+            1. The goal is to jump the opponent's piece and remove them from the board.
+            <br>
+            2. You can only move diagonally forward, with the exception of the king.
+            <br>
+            3. When jumping an opponent's piece, you can do so backwards.
+            <br>
+            4. If a piece has the opportunity to jump, it must take the jump.
+            <br>
+            5. If a piece reaches the other end of the board, it becomes a king and it can move diagonally backwards.
+            <br>
+            6. To win you have to take all of the opponent's pieces or until the opponent can't move anymore.
+            <br>
+            7. If neither of you can't move, the winner is decided by who took the most opponent's pieces.
+            <br>
+        </div> 
+    </div>   
+    <br>
+    <div id="description"></div>
     <script src="/socket.io/socket.io.js"></script>
     <script src='/javascript/splash.js'></script>
 </body>

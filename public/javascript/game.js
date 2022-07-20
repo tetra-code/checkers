@@ -10,6 +10,7 @@ const score = document.getElementById("score");
 const black_background = document.getElementById("black_background");
 const color = sessionStorage.getItem('color');
 const gameID = window.location.href.split('/play/')[1];
+const turnDescription = document.getElementById("turn_description");
 
 let windowHeight, windowWidth;
 let moveLength = 80 ;
@@ -181,6 +182,7 @@ document.getElementsByTagName("BODY")[0].onresize = function() {
 	}
 }
 
+displayInitialTurn();
 
 /*=====================Select checkers=====================*/
 if (color === 'white') {
@@ -387,6 +389,7 @@ function makeMove(index) {
 	if (isMultiplayer && !updatingBoard) {
 		broadcastMove();
 	}
+	displayChangedTurn()
 }
 
 /*===========Utility methods to check and move pieces=========*/
@@ -513,6 +516,22 @@ function checkForMoves() {
 			return false;
 		}
 	return true;
+}
+
+function displayInitialTurn() {
+	if (color === 'white') {
+		turnDescription.innerText = "It is your turn";
+	} else {
+		turnDescription.innerText = "It is opponent's turn";
+	}
+}
+
+function displayChangedTurn() {
+	if (isTurn()) {
+		turnDescription.innerText = "It is your turn";
+	} else {
+		turnDescription.innerText = "It is opponent's turn";
+	}
 }
 
 function declareWinner() {

@@ -64,8 +64,9 @@ const createMultiGame = (socket, clientID) => {
     game.player1 = clientID;
     games.push(game);
     socket.join(game.gameId);
-    // socket.leave(socket.id);
     socket.emit('color', 'white');
+    socket.emit('standby', 'Created multiplayer game. Waiting for other playesr');
+    // socket.leave(socket.id);
     return game;
 };
 
@@ -90,7 +91,7 @@ const checkForMultiGame = (socket, clientID) => {
         game = games[i];
         if (game.state === 2 && game.player1 === clientID) {
             alreadyCreatedMultiGame = true;
-            console.log("already generated game")
+            socket.emit('standby', 'Already generated a multiplayer game. Wait for other players');
             return game;
         }
         if (game.state === 2 && game.player2 === null) {
