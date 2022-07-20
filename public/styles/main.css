@@ -56,9 +56,9 @@ body, html {
     background:var(--color-secondary);
 }
 
-.clear_float {
+/* .clear_float {
     clear: both;
-}
+} */
 
 .board {
     position: relative;
@@ -66,7 +66,6 @@ body, html {
     height: 640px;
     margin: 0 auto;
 }
-
 
 .checker {
     top:10px;

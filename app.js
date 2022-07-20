@@ -68,6 +68,7 @@ const createMultiGame = (socket, clientID) => {
     game.player1 = clientID;
     games.push(game);
     socket.join(game.gameId);
+    socket.emit('color', 'white');
     console.log("generated new multiplayer game");
     return game;
 };
@@ -99,6 +100,7 @@ const checkForMultiGame = (socket, clientID) => {
             game.player2 = clientID;
             socket.join(game.gameId);
             console.log("found a multiplayer game pair")
+            socket.emit('color', 'black');
             return game;
         } 
     }
@@ -116,7 +118,6 @@ io.on("connection", (socket) => {
     let clientID = guid();
     // by default send clientID to all new connections
     socket.emit('clientID', clientID);
-    console.log("Sent ID to " + socket.id)
 
     socket.on('setID', () => {
         console.log("Client has set the Id")
@@ -158,12 +159,19 @@ io.on("connection", (socket) => {
         // distinguishes from 'transport close'
         console.log(`Disconnected due to ${reason}`);
         if (reason === "transport close") {
-            // player left mid game or connection lost
-            // if it created a game, set it to 0
             const clientID = users[socket.id];
             checkGame(clientID);
             delete users[socket.id];
             console.log("removed from users object");
+
+            const url = socket.handshake.headers.referer;
+            // player left mid game or connection lost
+            // if it created a game, set it to 0
+            if (url.includes('/play/')) {
+                console.log(url);
+                const gameId = url.split('/play/');
+                console.log(gameId);
+            }
         }
     });
     //below broadcasts to all connected sockets

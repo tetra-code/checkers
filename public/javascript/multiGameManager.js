@@ -1,4 +1,8 @@
+const wsProtocol = location.protocol.includes('https') ? 'wss:' : 'ws:';
+const socket = io();
+
 /*===================== Global variables =========================*/
+const splashBtn = document.getElementById('splashBtn');
 const square_class = document.getElementsByClassName("square");
 const white_checker_class = document.getElementsByClassName("white_checker");
 const black_checker_class = document.getElementsByClassName("black_checker");
@@ -31,6 +35,11 @@ let multiplier = 1  //to determine whether jump 2 rows for attack or jump 1 row 
 let oneMove; //to move once for 1 jump
 let anotherMove; //to move twice for attack
 let boardLimit,reverse_boardLimit, moveUpLeft,moveUpRight, moveDownLeft,moveDownRight, boardLimitLeft, boardLimitRight;
+
+// white always goes first
+const color = sessionStorage.getItem('color');
+console.log(color);
+let whiteIsNext = true;
 
 /*===================== checkers board adjustment =========================*/
 getDimension();
@@ -325,9 +334,14 @@ function makeMove(index) {
 		}
 	}
 
-	transmitMove()
-
+    broadcastMove();
 }
+
+function broadcastMove(payload) {
+    socket.emit("game_move", () => {
+
+    })
+};
 
 /*===========Utility methods to check and moving pieces=========*/
 function executeMove(X,Y,nSquare) {
@@ -463,7 +477,6 @@ function getDimension() {
     windowWidth =  window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
 }
 
-
 /**
  * To resize board based on display size 
  */
@@ -491,18 +504,8 @@ document.getElementsByTagName("BODY")[0].onresize = function() {
 	}
 }
 
-// go to 'play' screen when received start msg
-socket.on('start', (gameId) => {
-    // manually disconnect to indicate it connection wasn't unintentionally closed
-    socket.disconnect();
-    setTimeout(() => {
-        window.location.href = `/play/${gameId}`;
-    }, 2000);
-});
+socket.disconnect();
 
 multiplayerBtn.addEventListener("click", () => {
-    socket.disconnect();
-    setTimeout(() => {
-        window.location.href = `/play/${gameId}`;
-    }, 2000);
+    socket.emit("multiplayer");
 })
