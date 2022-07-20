@@ -1,0 +1,64 @@
+* {
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+}
+
+:root {
+    --color-main: #060d5b;
+    --color-secondary: #8ae48c;
+    --color-dark: #000000;
+    --color-light: #ffffff;
+
+    --ff-primary: 'Poppins', sans-serif;
+    --ff-secondary: 'Helvetica', sans-serif;
+    --fw-reg: 300;
+    --fw-bold: 700;
+
+    --fs-h1: 6rem;
+    --fs-h2: 3rem;
+    --fs-h3: 2rem;
+    --fs-body: 1.25rem;
+}
+
+@media (max-width: 800px) {
+    :root {
+        --fs-h1: 4rem;
+        --fs-h2: 2rem;
+        --fs-h3: 2rem;
+        --fs-body: 1rem;
+    }
+}
+
+/* General */
+body {
+     margin: 0;
+     padding: 0;
+     font-family: var(--ff-primary);
+     font-size: var(--fs-body);
+     line-height: 1.5;
+}
+
+/* Game screen */
+/* #board {
+    position: absolute;
+    left: 50%;
+    top: 25rem;
+    text-align: center;
+    transform: translate(-50%, -50%);
+} */
+
+.box {
+    width: 100px;
+    height: 100px;
+    border: 1px solid black;
+    display: inline-block;
+    margin: -4px;
+}
+
+.light {
+   background-color: var(--color-light); 
+}
+
+.dark {
+    background-color: var(--color-dark);
+}
