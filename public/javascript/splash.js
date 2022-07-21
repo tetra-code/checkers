@@ -35,7 +35,7 @@ socket.on('clientID', (clientID) => {
     }
 });
 
-//player1 is white, playey2 is black
+//player1 is white, player2 is black
 socket.on('color', (color) => {
     console.log(color);
     sessionStorage.setItem('color', color);
