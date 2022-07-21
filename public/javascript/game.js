@@ -396,8 +396,8 @@ function executeMove(X,Y,nSquare) {
 
 function highLightMove() {
     if (previousSquare && currentSquare) {
-        previousSquare.id.style.background = "#a2ea8c";
-        currentSquare.id.style.background = "#a2ea8c";
+        previousSquare.id.style.background = "#704923";
+        currentSquare.id.style.background = "#704923";
     }
 }
 
@@ -408,10 +408,10 @@ function eraseHighlights() {
     }
 }
 
-function checkMove(Apiece,tLimit,tLimit_Side,moveDirection,theDirection){
+function checkMove(Apiece, tLimit,tLimit_Side, moveDirection,theDirection) {
 	if(Apiece.coordY != tLimit){
 		if(Apiece.coordX != tLimit_Side && !box[ Apiece.occupied_square + moveDirection ].occupied){
-			box[ Apiece.occupied_square + moveDirection ].id.style.background = "#704923";
+			box[ Apiece.occupied_square + moveDirection ].id.style.background = "#a2ea8c";
 			theDirection = Apiece.occupied_square + moveDirection;
 		} else theDirection = undefined;
 	} else theDirection = undefined;
@@ -426,7 +426,7 @@ function checkAttack( check , X, Y , negX , negY, squareMove, direction) {
 		!box[check.occupied_square + squareMove * 2 ].occupied) {
 		mustAttack = true;
 		direction = check.occupied_square +  squareMove*2 ;
-		box[direction].id.style.background = "#704923";
+		box[direction].id.style.background = "#a2ea8c";
 		return direction ;
 	} 
     direction =  undefined;
