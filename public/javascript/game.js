@@ -6,9 +6,6 @@ const square_class = document.getElementsByClassName("square");
 const white_checker_class = document.getElementsByClassName("white_checker");
 const black_checker_class = document.getElementsByClassName("black_checker");
 const board = document.getElementById("board");
-const score = document.getElementById("score");
-const black_background = document.getElementById("black_background");
-const color = sessionStorage.getItem('color');
 const gameID = window.location.href.split('/play/')[1];
 const turnDescription = document.getElementById("turn_description");
 
@@ -25,8 +22,9 @@ const blackcheckers = [];
 let selectedPiece, selectedPieceindex;
 let upRight, upLeft, downLeft, downRight; 
 let updatingBoard = false;
-let whiteIsNext = true;
+let blackIsNext = true;
 let isMultiplayer = sessionStorage.getItem('game_mode') === 'multiplayer'
+const color = isMultiplayer ? sessionStorage.getItem('color') : 'black';
 let previousSquare;
 let currentSquare;
 let currentSquareIndex;
@@ -193,10 +191,10 @@ if (color === 'white') {
 
 // checks if its users turn to move a piece
 const isTurn = () => {
-	if (whiteIsNext && color === 'white') {
+	if (blackIsNext && color === 'black') {
 		return true;
 	}
-	if (!whiteIsNext && color === 'black') {
+	if (!blackIsNext && color === 'white') {
 		return true;
 	}
 	return false;
@@ -383,7 +381,7 @@ function makeMove(index) {
 				return false};
 		}
 	}
-	whiteIsNext = !whiteIsNext;
+	blackIsNext = !blackIsNext;
 
 	// only broadcast if in multiplayer and you're not updating board
 	if (isMultiplayer && !updatingBoard) {
@@ -519,7 +517,7 @@ function checkForMoves() {
 }
 
 function displayInitialTurn() {
-	if (color === 'white') {
+	if (color === 'black') {
 		turnDescription.innerText = "It is your turn";
 	} else {
 		turnDescription.innerText = "It is opponent's turn";
@@ -535,10 +533,8 @@ function displayChangedTurn() {
 }
 
 function declareWinner() {
-	black_background.style.display = "inline";
-	score.style.display = "box";
-    if (selectedCheckerType[1].color == "white") score.innerHTML = "White wins";
-    else score.innerHTML = "Black wins";
+    if (selectedCheckerType[1].color == "white") turnDescription.innerHTML = "White wins";
+    else turnDescription.innerHTML = "Black wins";
 }
 
 //===================Websocket connection handlers and methods===================== 
@@ -553,7 +549,7 @@ const updateBoard = (response) => {
 	selectedPiece = selectedCheckerType[selectedPieceindex];
 	showMoves(selectedPiece.id)
 	makeMove(response.dest_square_index)
-	// whiteIsNext = response.white_is_next;
+	// blackIsNext = response.black_is_next;
 	game_is_live = response.game_is_live;
 	updatingBoard = false;
 }
