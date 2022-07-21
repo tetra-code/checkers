@@ -34,8 +34,6 @@ let selectedCheckerType;
 let mustAttack = false;
 let gameOver = false;
 let multiplier = 1  //to determine whether jump 2 rows for attack or jump 1 row for moving
-let oneMove; //to move once for 1 jump
-let anotherMove; //to move twice for attack
 let boardLimit,reverse_boardLimit, moveUpLeft,moveUpRight, moveDownLeft,moveDownRight, boardLimitLeft, boardLimitRight;
 
 /*================Class constructors===============*/
@@ -208,7 +206,6 @@ const eraseRoads = () => {
 	if(upLeft) box[upLeft].id.style.background = "#BA7A3A";
 }
 	
-
 const showMoves = (piece) => {
 	if (isMultiplayer && !isTurn() && !updatingBoard) return false;
 	let match = false;
@@ -229,15 +226,6 @@ const showMoves = (piece) => {
 		}
 	}
     const selectedCheckerPiece = selectedCheckerType[i];
-
-    // for when multiple moves (multiple hits) are avilable
-	if (oneMove && !hasAttackMoves(oneMove)) {
-		changeTurns(oneMove);
-		oneMove = undefined;
-		return false;
-	}
-
-	if (oneMove && oneMove != selectedCheckerPiece) return false;
 
     //if no match was found; it happens when for example red moves and you press black
 	if (!match) return false; 
@@ -358,31 +346,19 @@ function makeMove(index) {
 	eraseRoads();
 	selectedCheckerType[selectedPieceindex].checkIfKing();
 
-	// change the turn 
-	if (isMove) {
-		anotherMove = undefined;
-		if (mustAttack) {
-			anotherMove = hasAttackMoves(selectedCheckerType[selectedPieceindex]);
-		}
+	//changing tunrs
+	changeTurns(selectedCheckerPiece);
+	gameOver = checkIfLost();
+	if (gameOver) { 
+		setTimeout(declareWinner(), 3000 ); 
+		return false};
+	gameOver = checkForMoves();
+	if (gameOver) { 
+		setTimeout(declareWinner(), 3000); 
+		return false;
+	};
 
-		if (anotherMove){
-			oneMove = selectedCheckerType[selectedPieceindex];
-			showMoves(oneMove);
-		} else { // check if game is finished
-			oneMove = undefined;
-		 	changeTurns(selectedCheckerPiece);
-		 	gameOver = checkIfLost();
-		 	if (gameOver) { 
-				setTimeout(declareWinner(),3000 ); 
-				return false};
-		 	gameOver = checkForMoves();
-		 	if (gameOver) { 
-				setTimeout(declareWinner(),3000); 
-				return false};
-		}
-	}
 	blackIsNext = !blackIsNext;
-
 	// only broadcast if in multiplayer and you're not updating board
 	if (isMultiplayer && !updatingBoard) {
 		broadcastMove();
@@ -502,7 +478,7 @@ function changeTurns(checker) {
 
 function checkIfLost() {
 	for(let i = 1 ; i <= 12; i++)
-		if(selectedCheckerType[i].alive)
+		if (selectedCheckerType[i].alive)
 			return false;
 	return true;
 }
@@ -533,8 +509,8 @@ function displayChangedTurn() {
 }
 
 function declareWinner() {
-    if (selectedCheckerType[1].color == "white") turnDescription.innerHTML = "White wins";
-    else turnDescription.innerHTML = "Black wins";
+    if (blackIsNext) turnDescription.innerHTML = "Black wins";
+    else turnDescription.innerHTML = "White wins";
 }
 
 //===================Websocket connection handlers and methods===================== 
